@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
 	FILE *fid;						/* output file id */
 	
     /* Input IP address of PC running l2pserver */
-	sprintf(srvIP,"123.123.123.12");
+	sprintf(srvIP,"123.123.123.123");
 	
     /* Read command line arguments */
 	if(argc == 3)

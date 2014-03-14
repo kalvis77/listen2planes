@@ -41,6 +41,9 @@
  * another language written to take regular telescope updates from the operating SLR system
  * and provided them to the server using the same format so that it can then supply this
  * information to its  applications.
+ *
+ * To download the l2pgui visual display written in Python that connects to the l2pserver
+ * visit https://github.com/jcrod/l2pGUI.
  * 
  * This software is provided freely for the benefit of the SLR community.  Please
  * make available any further developments or applications.
