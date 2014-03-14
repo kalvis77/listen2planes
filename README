@@ -1,0 +1,50 @@
+
+*******listen2planes README***
+ * 
+ * Author: Matthew Wilkinson.
+ * Institute: Space Geodesy Facility, Herstmonceux UK.
+ * Research Council: British Geological Survey, Natural Environment Research Council.
+ *  
+ * Please visit here to read our disclaimer: http://www.bgs.ac.uk/downloads/softdisc.html
+ * 
+ * This software package was designed for Satellite Laser Ranging stations but could
+ * be adapted for general use. It is intended for use with the SBS-3 receiver, supplied
+ * by Kinetic Avionics.
+ * 
+ * You should begin by running the listen2planes server, l2pserver.  This makes a
+ * connection to the SBS-3 receiver and requires the IP address and port number of
+ * the raw data stream or alternatively the raw output from the BaseStation software
+ * package.  The IP address for the SBS-3 is setup through BaseStation initially by
+ * connecting via USB.  Enter the IP address and port as l2pserver command line arguments
+ * along with the elevation cut off.
+ * 
+ * Once the l2pserver is running it will accept connections on the port 2020 and the
+ * IP address of the operating PC. A connection can be made using the l2pclient, the
+ * l2pgui display or by TCP/IP to develop your own application
+ * 
+ * The l2pserver serves updates containing latitude, longitude, altitude and velocity
+ * components of the detected aircraft.  It also calculates their azimuth, elevation and
+ * range and so a reference latitude, longitude and altitude are required for the origin
+ * station used.  In addition the equivalent geocentric XYZ coordinates must also be input.
+ * These are required by both l2pserver and l2pclient and have the prefix STAT_.
+ * 
+ * The l2pclient can be run in 2 modes, controlled by the variable 'YNclient'.  If this
+ * variable is FALSE the  client will communicate as a 'reader' and only output the
+ * aircraft as text to the screen.  If this variable is TRUE then the client is identified
+ * as 'client' and will provide warnings of approaching aircraft.  This requires an
+ * additional connection to l2pserver to update the azimuth and elevation direction of the
+ * laser telescope. The size and shape of the warning area around aircraft can be adjusted
+ * by changing the predict ahead times and the bndry and tri variables set in degrees.
+ * 
+ * The example code l2ptelesc_example.c connects to the l2pserver and deposits the
+ * telescope direction angles.  This code should be adapted or an equivalent coded in
+ * another language written to take regular telescope updates from the operating SLR system
+ * and provided them to the server using the same format so that it can then supply this
+ * information to its  applications.
+ * 
+ * This software is provided freely for the benefit of the SLR community.  Please
+ * make available any further developments or applications.
+ * 
+ * The sounds used in the l2pclient application are taken from http://www.freesound.org
+ * 
+*/
