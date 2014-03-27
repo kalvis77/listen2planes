@@ -116,13 +116,13 @@ int main(int argc, char *argv[])
 	double ellen;						/* El separation between telescope and telescope on pos-pred line */
 	double theta;						/* angle to calculate telescope pos-pred line separation */ 
 	double wR; 						/* Min separation of aircraft to warning pos-pred line */
-	double cR;						/* Min separation of aircraft to alarm pos-pred line */
+	double aR;						/* Min separation of aircraft to alarm pos-pred line */
 	double Tazim2;						/* Az of closest point to telescope on pos-pred line */
 	double Telev2;						/* El of closest point to telescope on pos-pred line */
 	double wbndry;						/* size of boundary around warning */
 	double abndry;						/* size of boundary around alarm area */
 	double triw;						/* degree of spread of warning boundary around pred */
-	double tric;						/* degree of spread of alarm boundary around pred */
+	double tria;						/* degree of spread of alarm boundary around pred */
 	double scale;						/* distance along pos-pred line */
 	double wps_azsep;					/* Warning Az separation between telescope and plane */
 	double wps_elsep;					/* Warning El separation between telescope and plane */
@@ -139,6 +139,8 @@ int main(int argc, char *argv[])
 	double wpr_elsep2;					/* El separation between telescope on line and warning prediction */
 	double wl2pos1;						/* Difference on pos-pred line from aircraft position to telescope on line and pred */
 	double wl2pos2;						/* Difference on pos-pred line from aircraft pred to telescope on line and position */
+	int wpssign;
+	int wprsign;
 	
 	double apr_azsep;					/* Az separation between alarm prediction and telescope */
 	double apr_elsep;					/* El separation between alarm prediction and telescope */
@@ -150,6 +152,8 @@ int main(int argc, char *argv[])
 	double apr_elsep2;					/* El separation between telescope on line and alarm prediction*/
 	double al2pos1;						/* Difference on pos-pred line from aircraft position to telescope on line and pred */
 	double al2pos2;						/* Difference on pos-pred line from aircraft pred to telescope on line and pred */
+	int apssign;
+	int aprsign;
 	
 	int woverh,aoverh;					/* Flag to indicate if the warning and alarm plane pred lines goes over the zenith */
 	double Tcosfactor;					/* cos scale factor for telescope elevation azimuths */
@@ -165,7 +169,7 @@ int main(int argc, char *argv[])
 	char fwout[2];						/* Y/N flag to print output to a file */
 	char hlp[3];						/* Help -h flag */
 	int fire;						/* result ok to fire */							
-	int firel;						/* flag to control fire */					
+	int firel;						/* flag to control fire */	
 	int fireo;						/* flag to broadcast by l2pserver to control fire */
         int l,k,e;
 	double pi=3.1415926535898;
@@ -174,6 +178,7 @@ int main(int argc, char *argv[])
 	
     /* Input IP address of PC running l2pserver */
 	sprintf(srvIP,"123.123.123.123");
+	sprintf(srvIP,"193.61.194.29");
 	
     /* Read command line arguments */
 	if(argc == 3)
@@ -229,8 +234,8 @@ int main(int argc, char *argv[])
     /*** Adjust these variables to increase or decrease no-fire zone around aircraft */ 
 	wbndry=3.0;
 	abndry=1.5;
-	triw=3.0;
-	tric=1.5;
+	triw=2.0;
+	tria=1.5;
 	
 	
     /* Setup tcpip socket networking variables */
@@ -426,11 +431,11 @@ int main(int argc, char *argv[])
 		      woverh=FALSE;
 		      aoverh=FALSE;
 		      
-      /* Determine whether warning prediction crosses the zenith */
 		      wpl_azsep=wpredAz[e] - azimuth[e];				
 		      if(fabs(wpl_azsep) >180.0)
 			wpl_azsep=wpl_azsep - wpl_azsep*360.0/fabs(wpl_azsep);
 		      
+      /* Determine whether warning prediction crosses the zenith */
 		      if(fabs(wpl_azsep) >=90.0)
 		      {
       /* Adjust pred to use elevations > 90.0 and correct Az by 180.0 */
@@ -503,13 +508,13 @@ int main(int argc, char *argv[])
 		      aPRcosfactor=fabs(cos(2*pi*Elv/360.0));
 		      
 		      
-      /* Difference between predictions and aircraft direction */
+      /* Difference between predictions and current aircraft direction */
 		      wpl_azsep = wpredAz[e] - azimuth[e];
 		      wpl_elsep = wpredEl[e] - elevation[e];
 		      apl_azsep = apredAz[e] - azimuth[e];
-		      apl_elsep = apredEl[e] - elevation[e];
+		      apl_elsep = apredEl[e] - elevation[e];   
 			    
-      /* Difference between telescope and aircraft direction */
+      /* Difference between telescope and current aircraft direction */
 		      wps_azsep = wTazim - azimuth[e];
 		      wps_elsep = wTelev - elevation[e];
 		      aps_azsep = aTazim - azimuth[e];
@@ -537,28 +542,43 @@ int main(int argc, char *argv[])
 		      if(fabs(apr_azsep) >180.0)
 			apr_azsep=apr_azsep - apr_azsep*360.0/fabs(apr_azsep);
 		      
-			
-      /* Slope is gradient of elevation with azimuth */
-		      slope=wpl_elsep/wpl_azsep;
+	
 		      
+		      
+		      if(wpl_azsep == 0.0 )
+		      {
+			wR=fabs(wps_azsep*Tcosfactor);
+			theta=2*pi*90.0/360.0;
+		      }
+		      else if(wpl_elsep == 0.0 )
+		      {
+			wR=fabs(wps_elsep);
+			theta=0.0;
+		      }
+		      else
+		      {
+      /* Slope is gradient of elevation with azimuth */
+			slope=wpl_elsep/wpl_azsep;
+			
       /* az2 and el2 are where the aircraft el and az extend to meet the pos-pred line */
-		      el2=elevation[e] + slope*wps_azsep;		
-		      az2=azimuth[e] + wps_elsep/slope;
+			el2=elevation[e] + slope*wps_azsep;		
+			az2=azimuth[e] + wps_elsep/slope;
 		      
       /* Separations from pos-pred line to telescope components*/
-		      azlen=(Tazim - az2);
+			azlen=(Tazim - az2);
 		      
-		      if(fabs(azlen) >180.0)
-			azlen=azlen - azlen*360.0/fabs(azlen);
+			if(fabs(azlen) >180.0)
+			  azlen=azlen - azlen*360.0/fabs(azlen);
       /* Scale azlen by telescope cos() factor*/
-		      azlen=azlen*Tcosfactor;
-		      ellen=Telev - el2;
+			azlen=azlen*Tcosfactor;
+			ellen=Telev - el2;
 		      
       /* Calculate angle of pos-pred line*/
-		      theta=atan2(ellen,azlen);
+			theta=atan2(ellen,azlen);
 		      
       /* Calculate distance of telescope to pos-pred line*/
-		      wR=ellen*(cos(theta));
+			wR=ellen*(cos(theta));
+		      }
 		      
       /* Az and El components of vector to pos-pred line */
 		      Tazim2=wTazim - wR*sin(theta);
@@ -584,20 +604,35 @@ int main(int argc, char *argv[])
 		      if(fabs(wpr_azsep2) >180.0)
 			wpr_azsep2=wpr_azsep2 - wpr_azsep2*360.0/fabs(wpr_azsep2);	    
 		      
-      /* Repeat part for alarm prediction */
-		      slope=apl_elsep/apl_azsep;
-		      el2=elevation[e] + slope*aps_azsep;		
-		      az2=azimuth[e] + aps_elsep/slope;
-		      azlen=(Tazim - az2);
-		      if(fabs(azlen) >180.0)
-			azlen=azlen - azlen*360.0/fabs(azlen);
-		      azlen=azlen*Tcosfactor;
-		      ellen=Telev - el2;
-		      theta=atan2(ellen,azlen);
-		      cR=ellen*(cos(theta));
 		      
-		      Tazim2 = aTazim - cR*sin(theta);
-		      Telev2 = aTelev - cR*(cos(theta));
+      /* Repeat part for alarm prediction */
+      
+		      if(apl_azsep == 0.0 )
+		      {
+			aR=fabs(aps_azsep*Tcosfactor);
+			theta=2*pi*90.0/360.0;
+		      }
+		      else if(apl_elsep == 0.0 )
+		      {
+			aR=fabs(aps_elsep);
+			theta=0.0;
+		      }
+		      else
+		      {
+			slope=apl_elsep/apl_azsep;
+			el2=elevation[e] + slope*aps_azsep;		
+			az2=azimuth[e] + aps_elsep/slope;
+			azlen=(Tazim - az2);
+			if(fabs(azlen) >180.0)
+			  azlen=azlen - azlen*360.0/fabs(azlen);
+			azlen=azlen*Tcosfactor;
+			ellen=Telev - el2;
+			theta=atan2(ellen,azlen);
+			aR=ellen*(cos(theta));
+		      }
+		      
+		      Tazim2 = aTazim - aR*sin(theta);
+		      Telev2 = aTelev - aR*(cos(theta));
 					      
       /* Az and El components of from aircraft position to telescope on pos-pred line */
 		      aps_azsep2 = Tazim2 - azimuth[e];
@@ -617,14 +652,63 @@ int main(int argc, char *argv[])
 		      if(fabs(apr_azsep2) >180.0)
 			apr_azsep2=apr_azsep2 - apr_azsep2*360.0/fabs(apr_azsep2);
 			    
-				      
+				
+		      wpssign=1.0;
+		      wprsign=1.0;
+		      if(wpl_azsep== 0.0)
+		      {
+			      if(wps_elsep2*wpl_elsep< 0.0)
+				      wpssign=-1.0;
+			      if(wpr_elsep2*wpl_elsep< 0.0)
+				      wprsign=-1.0;
+		      }
+		      else if(wpl_elsep== 0.0)
+		      {
+			      if(wps_azsep2*wpl_azsep< 0.0)
+				      wpssign=-1.0;
+			      if(wpr_azsep2*wpl_azsep< 0.0)
+				      wprsign=-1.0;
+		      }				      
+		      else
+		      {	      if(atan2(wps_elsep2,wps_azsep2)*atan2(wpl_elsep,wpl_azsep)< 0.0)
+				 wpssign=-1.0;
+			      if(atan2(wpr_elsep2,wpr_azsep2)*atan2(wpl_elsep,wpl_azsep)< 0.0)
+				 wprsign=-1.0;
+		      }
+	
+		      
+		      apssign=1.0;
+		      aprsign=1.0;
+		      if(apl_azsep== 0.0)
+		      {
+			      if(aps_elsep2*apl_elsep< 0.0)
+				      apssign=-1.0;
+			      if(apr_elsep2*apl_elsep< 0.0)
+				      aprsign=-1.0;
+		      }
+		      else if(apl_elsep== 0.0)
+		      {
+			      if(aps_azsep2*apl_azsep< 0.0)
+				      apssign=-1.0;
+			      if(apr_azsep2*apl_azsep< 0.0)
+				      aprsign=-1.0;
+		      }				      
+		      else
+		      {	      if(atan2(aps_elsep2,aps_azsep2)*atan2(apl_elsep,apl_azsep)< 0.0)
+				 apssign=-1.0;
+			      if(atan2(apr_elsep2,apr_azsep2)*atan2(apl_elsep,apl_azsep)< 0.0)
+				 aprsign=-1.0;
+		      }
+	
+		      
+		      
       /* Differences between warning pred point and telescope and telescope on pos-pred line */
-		      wl2pos1=sqrt(pow((wPR2cosfactor*wpr_azsep2),2.0) + pow(wpr_elsep2,2.0)) - sqrt(pow((wPLcosfactor*wpl_azsep),2.0) + pow(wpl_elsep,2.0));
-		      wl2pos2=sqrt(pow((wPS2cosfactor*wps_azsep2),2.0) + pow(wps_elsep2,2.0)) - sqrt(pow((wPLcosfactor*wpl_azsep),2.0) + pow(wpl_elsep,2.0));
+		      wl2pos1=wprsign*sqrt(pow((wPR2cosfactor*wpr_azsep2),2.0) + pow(wpr_elsep2,2.0)) - sqrt(pow((wPLcosfactor*wpl_azsep),2.0) + pow(wpl_elsep,2.0));
+		      wl2pos2=wpssign*sqrt(pow((wPS2cosfactor*wps_azsep2),2.0) + pow(wps_elsep2,2.0)) - sqrt(pow((wPLcosfactor*wpl_azsep),2.0) + pow(wpl_elsep,2.0));
 		      
       /* Differences between alarm pred point and telescope and telescope on pos-pred line */
-		      al2pos1=sqrt(pow((aPR2cosfactor*apr_azsep2),2.0) + pow(apr_elsep2,2.0)) - sqrt(pow((aPLcosfactor*apl_azsep),2.0) + pow(apl_elsep,2.0));
-		      al2pos2=sqrt(pow((aPS2cosfactor*aps_azsep2),2.0) + pow(aps_elsep2,2.0)) - sqrt(pow((aPLcosfactor*apl_azsep),2.0) + pow(apl_elsep,2.0));
+		      al2pos1=aprsign*sqrt(pow((aPR2cosfactor*apr_azsep2),2.0) + pow(apr_elsep2,2.0)) - sqrt(pow((aPLcosfactor*apl_azsep),2.0) + pow(apl_elsep,2.0));
+		      al2pos2=apssign*sqrt(pow((aPS2cosfactor*aps_azsep2),2.0) + pow(aps_elsep2,2.0)) - sqrt(pow((aPLcosfactor*apl_azsep),2.0) + pow(apl_elsep,2.0));
 				      
 		      fire=1;
 		      
@@ -665,7 +749,7 @@ int main(int argc, char *argv[])
       /* If telescope is beyond pred on line check if telescope is within a radius */
 		      if (al2pos2 >= 0.0)
 		      { 
-			if(sqrt(pow((aPRcosfactor*apr_azsep),2.0) + pow(apr_elsep,2.0)) <= tric*abndry)
+			if(sqrt(pow((aPRcosfactor*apr_azsep),2.0) + pow(apr_elsep,2.0)) <= tria*abndry)
 			  fire=-1;
 		      }		  
 	    
@@ -674,7 +758,7 @@ int main(int argc, char *argv[])
 		      {	
 			scale=sqrt(pow((aPS2cosfactor*aps_azsep2),2.0) + pow(aps_elsep2,2.0)) / sqrt(pow((aPLcosfactor*apl_azsep),2.0) + pow(apl_elsep,2.0));
 					
-			if (fabs(cR) < abndry+(tric - 1.0)*abndry*scale)
+			if (fabs(aR) < abndry+(tria - 1.0)*abndry*scale)
 			  fire=-1;  
 		      }
 		            
