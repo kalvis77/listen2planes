@@ -232,10 +232,10 @@ int main(int argc, char *argv[])
 	
     /* Set size and shape of boundaries around aircraft */
     /*** Adjust these variables to increase or decrease no-fire zone around aircraft */ 
-	wbndry=3.0;
-	abndry=1.5;
+	wbndry=4.0;
+	abndry=3.0;
 	triw=2.0;
-	tria=1.5;
+	tria=2.0;
 	
 	
     /* Setup tcpip socket networking variables */
